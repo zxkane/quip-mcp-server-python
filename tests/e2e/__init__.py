@@ -1,0 +1,1 @@
+# Mark tests/e2e as a Python package

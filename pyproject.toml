@@ -49,6 +49,9 @@ python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
 addopts = "-v"
+markers = [
+    "e2e: marks tests as end-to-end tests that require external resources",
+]
 
 [tool.coverage.run]
 source = ["src"]

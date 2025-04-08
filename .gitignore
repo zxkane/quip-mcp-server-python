@@ -22,7 +22,9 @@ wheels/
 .coverage
 
 # Environment
+!.env.example
 .env
+.env.*
 .venv
 env/
 venv/

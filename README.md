@@ -128,7 +128,11 @@ quip-mcp-server/
 │   └── tools.py        # Tool definitions and handlers
 ├── tests/
 │   ├── __init__.py
-│   └── test_server.py  # Unit tests for the server
+│   ├── test_server.py  # Unit tests for the server
+│   └── e2e/            # End-to-end tests
+│       ├── __init__.py
+│       ├── conftest.py # Test fixtures for e2e tests
+│       └── test_quip_integration.py # Integration tests with Quip API
 ├── .uv/
 │   └── config.toml     # uv configuration settings
 ├── pyproject.toml      # Project metadata and dependencies (includes pytest config)
@@ -191,7 +195,6 @@ python -m src.server
 #### Running Tests
 
 The project uses pytest for testing. To run the tests:
-
 ```bash
 # Install development dependencies
 uv pip install -e ".[dev]"
@@ -201,6 +204,38 @@ pytest
 
 # Run tests with coverage
 pytest --cov=src
+
+# Run only e2e tests
+pytest tests/e2e
+
+# Run a specific e2e test
+pytest tests/e2e/test_quip_integration.py::test_connection
+```
+
+### End-to-End (e2e) Testing
+
+The project includes end-to-end tests that verify integration with the actual Quip API. To run these tests:
+
+1. Create a `.env.local` file in the project root with your test configuration:
+   ```
+   # Quip API token (required)
+   QUIP_TOKEN=your_actual_quip_token_here
+   
+   # Test configuration
+   TEST_THREAD_ID=your_test_spreadsheet_thread_id
+   TEST_SHEET_NAME=Sheet1  # Optional: specific sheet name to test
+   ```
+
+2. Run the e2e tests:
+   ```bash
+   # Run all e2e tests
+   pytest tests/e2e
+   
+   # Run with verbose output
+   pytest -v tests/e2e
+   ```
+
+Note: The e2e tests will be skipped automatically if `.env.local` is missing or if required environment variables are not set.
 ```
 
 #### Debugging
