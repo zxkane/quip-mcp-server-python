@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      QUIP_TOKEN: ${{ secrets.QUIP_TOKEN }}
+      QUIP_BASE_URL: ${{ secrets.QUIP_BASE_URL }}
+      TEST_THREAD_ID: ${{ secrets.TEST_THREAD_ID }}
+      TEST_SHEET_NAME: ${{ secrets.TEST_SHEET_NAME }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        run: |
+          curl -Ls https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies
+        run: uv pip install --system --no-cache-dir
+
+      - name: Run unit tests
+        run: pytest tests
+
+      - name: Run e2e tests
+        run: pytest tests/e2e
