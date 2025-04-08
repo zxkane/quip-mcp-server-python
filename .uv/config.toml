@@ -1,0 +1,19 @@
+# uv configuration file
+
+# Default Python version to use
+python-version = "3.12"
+
+# Use a specific index URL for package downloads
+index-url = "https://pypi.org/simple"
+
+# Enable verbose output for debugging
+verbose = false
+
+# Enable colored output
+color = true
+
+# Default virtual environment directory
+venv-path = ".venv"
+
+# Automatically activate the virtual environment
+auto-activate = true

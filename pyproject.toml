@@ -1,0 +1,65 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "quip-mcp-server"
+version = "0.1.0"
+description = "MCP server for interacting with Quip spreadsheets"
+readme = "README.md"
+requires-python = ">=3.12"
+license = {file = "LICENSE"}
+authors = [
+    {name = "Kane Zhu", email = "me@kane.mx"},
+]
+dependencies = [
+    "mcp-python>=0.1.0",
+    "requests>=2.28.0",
+    "beautifulsoup4>=4.11.0",
+    "openpyxl>=3.0.10",
+    "python-dotenv>=0.20.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.1.0",
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "mypy>=1.0.0",
+]
+
+[project.scripts]
+quip-mcp-server = "src.server:main"
+
+[project.entry-points.uvx]
+quip-mcp-server = "src.server:main"
+
+[project.urls]
+"Homepage" = "https://github.com/yourusername/quip-mcp-server"
+"Bug Tracker" = "https://github.com/yourusername/quip-mcp-server/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+addopts = "-v"
+
+[tool.coverage.run]
+source = ["src"]
+omit = ["tests/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "pass",
+    "raise ImportError",
+]
