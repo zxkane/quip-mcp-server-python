@@ -2,11 +2,12 @@ import os
 import json
 import tempfile
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Sequence
 
 from mcp.types import Tool, TextContent, ImageContent, EmbeddedResource
 
 from .quip_client import QuipClient, convert_xlsx_to_csv
+from .storage import StorageInterface, truncate_csv_content
 
 # Initialize logger
 logger = logging.getLogger("quip-mcp-server")
@@ -21,7 +22,7 @@ def get_quip_tools() -> List[Tool]:
     return [
         Tool(
             name="quip_read_spreadsheet",
-            description="Read the content of a Quip document by its thread ID",
+            description="Read the content of a Quip spreadsheet by its thread ID. Returns a JSON object containing truncated CSV content (limited to 10KB) and metadata. For large spreadsheets, the returned content may be truncated. To access the complete CSV data, use the resource interface with URI format 'quip://spreadsheet/{threadId}/{sheetName}' or 'file:///<storage path>/{threadId}-{sheetName}.csv'. The returned data structure includes: { 'csv_content': string (possibly truncated CSV data), 'metadata': { 'rows': number, 'columns': number, 'is_truncated': boolean, 'resource_uri': string } }",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -38,13 +39,13 @@ def get_quip_tools() -> List[Tool]:
             }
         )
     ]
-
-async def handle_quip_read_spreadsheet(arguments: Dict[str, Any]) -> List[TextContent]:
+async def handle_quip_read_spreadsheet(arguments: Dict[str, Any], storage: StorageInterface) -> Sequence[TextContent]:
     """
     Handle the quip_read_spreadsheet tool
     
     Args:
         arguments: Dictionary containing the tool arguments
+        storage: Storage interface for saving and retrieving CSV content
         
     Returns:
         List of TextContent objects
@@ -76,7 +77,6 @@ async def handle_quip_read_spreadsheet(arguments: Dict[str, Any]) -> List[TextCo
     
     # Try primary export method first
     csv_data = None
-    used_fallback = False
     error_message = None
     
     try:
@@ -99,7 +99,6 @@ async def handle_quip_read_spreadsheet(arguments: Dict[str, Any]) -> List[TextCo
         try:
             # Try fallback method
             csv_data = client.export_thread_to_csv_fallback(thread_id, sheet_name)
-            used_fallback = True
             logger.info("Successfully exported using fallback method")
         except Exception as fallback_error:
             logger.error(f"Fallback export method also failed: {str(fallback_error)}")
@@ -116,5 +115,28 @@ async def handle_quip_read_spreadsheet(arguments: Dict[str, Any]) -> List[TextCo
     if not csv_data:
         raise ValueError("Failed to export data: no CSV content generated")
     
-    # Return the CSV data
-    return [TextContent(type="text", text=csv_data)]
+    # Save the full CSV content to storage
+    storage.save_csv(thread_id, sheet_name, csv_data)
+    
+    # Get metadata
+    metadata = storage.get_metadata(thread_id, sheet_name)
+    
+    # Truncate CSV content if it's too large (> 10KB)
+    MAX_SIZE = 10 * 1024  # 10KB
+    truncated_csv, is_truncated = truncate_csv_content(csv_data, MAX_SIZE)
+    
+    # Update metadata with truncation info
+    metadata["is_truncated"] = is_truncated
+    
+    # Create response with CSV content and metadata
+    response_data = {
+        "csv_content": truncated_csv,
+        "metadata": metadata
+    }
+    # Convert to JSON and return
+    # Note: We use type="text" here because:
+    # 1. It's consistent with other parts of the codebase (see server.py access_resource)
+    # 2. MCP clients like Claude expect this format for structured data
+    # 3. We manually serialize the JSON object to ensure proper formatting
+    # If MCP adds native JSON support in the future, this could be changed to type="json"
+    return [TextContent(type="text", text=json.dumps(response_data))]

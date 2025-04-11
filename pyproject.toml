@@ -51,7 +51,9 @@ python_functions = "test_*"
 addopts = "-v"
 markers = [
     "e2e: marks tests as end-to-end tests that require external resources",
+    "asyncio: marks tests as asyncio tests",
 ]
+asyncio_default_fixture_loop_scope = "function"
 
 [tool.coverage.run]
 source = ["src"]
