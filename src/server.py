@@ -14,6 +14,7 @@ from mcp.types import Resource, TextContent, ImageContent, EmbeddedResource, Res
 
 from dotenv import load_dotenv
 
+from .version import __version__
 from .tools import get_quip_tools, handle_quip_read_spreadsheet
 from .storage import create_storage, StorageInterface
 
@@ -221,7 +222,7 @@ async def async_main(args):
             write_stream,
             InitializationOptions(
                 server_name="quip-mcp-server",
-                server_version="0.1.0",
+                server_version=__version__,
                 capabilities=server.get_capabilities(
                     notification_options=NotificationOptions(),
                     experimental_capabilities={},
