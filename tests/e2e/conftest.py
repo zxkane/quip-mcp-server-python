@@ -1,7 +1,9 @@
 import os
 import pytest
+import tempfile
 from dotenv import load_dotenv
 from src.quip_client import QuipClient
+from src.storage import LocalStorage
 @pytest.fixture(scope="session", autouse=True)
 def load_env():
     """
@@ -42,3 +44,33 @@ def test_thread_id():
 def test_sheet_name():
     """Get the test sheet name"""
     return os.environ.get("TEST_SHEET_NAME")
+
+@pytest.fixture
+def test_large_sheet_name():
+    """Get the test large sheet name"""
+    return os.environ.get("TEST_LARGE_SHEET_NAME")
+
+@pytest.fixture
+def temp_storage_path():
+    """
+    Create a temporary directory for storage during tests
+    
+    Returns:
+        str: Path to the temporary directory
+    """
+    with tempfile.TemporaryDirectory(prefix="quip_mcp_test_") as temp_dir:
+        yield temp_dir
+        # Directory will be automatically cleaned up after the test
+
+@pytest.fixture
+def storage(temp_storage_path):
+    """
+    Create a LocalStorage instance with a temporary directory
+    
+    Args:
+        temp_storage_path: Temporary directory path from fixture
+        
+    Returns:
+        LocalStorage: Storage instance for testing
+    """
+    return LocalStorage(temp_storage_path, is_file_protocol=False)

@@ -6,9 +6,12 @@ A Model Context Protocol (MCP) server for interacting with Quip spreadsheets. Th
 
 - Retrieve spreadsheet content from Quip documents
 - Support for selecting specific sheets by name
-- Returns data in CSV format
+- Returns data in CSV format with metadata
 - Handles authentication via Quip API token
 - Provides appropriate error messages for non-spreadsheet documents
+- Automatically handles large spreadsheets by truncating content when necessary
+- Stores spreadsheet content locally for efficient access
+- Provides resource URIs for accessing complete spreadsheet content
 
 ## Installation
 
@@ -41,16 +44,18 @@ python -m src.server
 ### Set up environment variables
 
 Set up the required environment variables:
-
 ```bash
 export QUIP_TOKEN=your_quip_api_token
 export QUIP_BASE_URL=https://platform.quip.com  # Optional, defaults to this value
+export QUIP_STORAGE_PATH=/path/to/storage       # Optional, defaults to ~/.quip-mcp-server/storage
+```
 ```
 
 Alternatively, create a `.env` file in the root directory:
 ```
 QUIP_TOKEN=your_quip_api_token
 QUIP_BASE_URL=https://platform.quip.com
+QUIP_STORAGE_PATH=/path/to/storage
 ```
 
 ## Usage
@@ -63,7 +68,21 @@ Add to your Claude settings:
 "mcpServers": {
   "quip": {
     "command": "uvx",
-    "args": ["quip-mcp-server"],
+    "args": ["quip-mcp-server", "--storage-path", "/path/to/storage"],
+    "env": {
+      "QUIP_TOKEN": "your_quip_api_token"
+    }
+  }
+}
+```
+
+If you want to use the file protocol for resource URIs:
+
+```json
+"mcpServers": {
+  "quip": {
+    "command": "uvx",
+    "args": ["quip-mcp-server", "--storage-path", "/path/to/storage", "--file-protocol"],
     "env": {
       "QUIP_TOKEN": "your_quip_api_token"
     }
@@ -77,10 +96,16 @@ Run the server directly:
 
 ```bash
 # Using uvx (recommended)
-uvx quip-mcp-server
+uvx quip-mcp-server --storage-path /path/to/storage
 
 # Using python (if installed via pip)
-python -m src.server
+python -m src.server --storage-path /path/to/storage
+
+# With file protocol for resource URIs
+uvx quip-mcp-server --storage-path /path/to/storage --file-protocol
+
+# With debug logging enabled
+uvx quip-mcp-server --storage-path /path/to/storage --debug
 ```
 
 ### Available Tools
@@ -102,11 +127,75 @@ Retrieves the content of a Quip spreadsheet as CSV.
 ```
 
 **Response:**
-The tool returns the spreadsheet content in CSV format.
+The tool returns a JSON object containing:
+- `csv_content`: The spreadsheet content in CSV format (truncated if too large)
+- `metadata`: Additional information about the spreadsheet:
+  - `total_rows`: Total number of rows in the spreadsheet
+  - `total_size`: Total size of the CSV content in bytes
+  - `is_truncated`: Boolean indicating if the content was truncated
+  - `resource_uri`: URI to access the complete spreadsheet content
+
+**Example Response (default protocol):**
+```json
+{
+  "csv_content": "header1,header2\nvalue1,value2\n...",
+  "metadata": {
+    "total_rows": 1000,
+    "total_size": 52840,
+    "is_truncated": true,
+    "resource_uri": "quip://AbCdEfGhIjKl?sheet=Sheet1"
+  }
+}
+```
+
+**Example Response (with --file-protocol):**
+```json
+{
+  "csv_content": "header1,header2\nvalue1,value2\n...",
+  "metadata": {
+    "total_rows": 1000,
+    "total_size": 52840,
+    "is_truncated": true,
+    "resource_uri": "file:///path/to/storage/AbCdEfGhIjKl-Sheet1.csv"
+  }
+}
+```
 
 **Error Handling:**
 - If the thread is not a spreadsheet, an error will be returned.
 - If the specified sheet is not found, an error will be returned.
+
+### Resource URIs
+
+The server provides resource URIs for accessing complete spreadsheet content. These URIs can be used with the MCP resource access mechanism.
+
+By default, the server uses the `quip://` protocol for resource URIs. However, you can use the `--file-protocol` option to use the `file://` protocol instead, which points directly to the local CSV files.
+
+#### Default Protocol (quip://)
+
+**URI Format:**
+```
+quip://{threadId}?sheet={sheetName}
+```
+
+**Example:**
+```
+quip://AbCdEfGhIjKl?sheet=Sheet1
+```
+
+#### File Protocol (with --file-protocol option)
+
+**URI Format:**
+```
+file://{storage_path}/{threadId}-{sheetName}.csv
+```
+
+**Example:**
+```
+file:///home/user/.quip-mcp-server/storage/AbCdEfGhIjKl-Sheet1.csv
+```
+
+When accessed, the resource returns the complete CSV content of the spreadsheet, regardless of size.
 
 ## How It Works
 
@@ -114,6 +203,24 @@ The server uses two methods to extract spreadsheet data:
 
 1. **Primary Method**: Exports the spreadsheet to XLSX format using the Quip API, then converts it to CSV.
 2. **Fallback Method**: If the primary method fails, it parses the HTML content of the document to extract the table data.
+
+For large spreadsheets, the server:
+1. Saves the complete CSV content to local storage
+2. Returns a truncated version (up to 10KB) with metadata
+3. Provides a resource URI for accessing the complete content
+
+### Command Line Arguments
+
+The server supports the following command line arguments:
+
+- `--storage-path`: Path to store CSV files (defaults to QUIP_STORAGE_PATH environment variable or ~/.quip-mcp-server/storage)
+- `--file-protocol`: Use file protocol for resource URIs (instead of quip:// protocol)
+- `--debug`: Enable debug logging
+
+**Example:**
+```bash
+uvx quip-mcp-server --storage-path /path/to/storage
+```
 
 ## Development
 
@@ -125,10 +232,12 @@ quip-mcp-server/
 │   ├── __init__.py
 │   ├── server.py       # Main MCP server implementation
 │   ├── quip_client.py  # Quip API client
-│   └── tools.py        # Tool definitions and handlers
+│   ├── tools.py        # Tool definitions and handlers
+│   └── storage.py      # Storage abstraction and implementations
 ├── tests/
 │   ├── __init__.py
 │   ├── test_server.py  # Unit tests for the server
+│   ├── test_storage.py # Unit tests for the storage module
 │   └── e2e/            # End-to-end tests
 │       ├── __init__.py
 │       ├── conftest.py # Test fixtures for e2e tests
