@@ -1,3 +1,5 @@
+Check out the [Quip MCP Server (TypeScript)](https://github.com/zxkane/quip-mcp-server-typescript) repository for both stdio and http transport supports.
+
 # Quip MCP Server
 
 A Model Context Protocol (MCP) server for interacting with Quip spreadsheets. This server provides tools to read spreadsheet data from Quip documents and return the content in CSV format.
