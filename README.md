@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/zxkane-quip-mcp-server-python-badge.png)](https://mseep.ai/app/zxkane-quip-mcp-server-python)
+
 Check out the [Quip MCP Server (TypeScript)](https://github.com/zxkane/quip-mcp-server-typescript) repository for both stdio and http transport supports.
 
 # Quip MCP Server
