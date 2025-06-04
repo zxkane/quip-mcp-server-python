@@ -37,8 +37,8 @@ quip-mcp-server = "src.server:main"
 quip-mcp-server = "src.server:main"
 
 [project.urls]
-"Homepage" = "https://github.com/yourusername/quip-mcp-server"
-"Bug Tracker" = "https://github.com/yourusername/quip-mcp-server/issues"
+"Homepage" = "https://github.com/zxkane/quip-mcp-server-python"
+"Bug Tracker" = "https://github.com/zxkane/quip-mcp-server-python/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src"]
